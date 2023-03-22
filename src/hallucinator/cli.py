@@ -47,19 +47,73 @@ def main(
 def plot_hallucination_spectra(
     spectra_folder: Path = typer.Argument("output/hallucination_spectra", help="Folder containing spectra"),
     elements: List[str] = typer.Option(None, help="Elements to use", show_default=False),
+    files: List[Path] = typer.Option(None, "--file", help="Files to use", show_default=False),
 ):
     """Plot hallucinated spectra in specified folder"""
-    if not spectra_folder.exists():
+    if files:
+        status = plot_spectra_from_files(files, elements)
+    elif not spectra_folder.exists():
         message = f"Folder {spectra_folder} does not exist. Did you run the `hallucinator generate` command?"
         typer.secho(message, fg=typer.colors.RED, err=True)
         raise typer.Exit(1)
-
-    status = plot_spectra_from_files(sorted(spectra_folder.glob("spectra_*.json")), elements)
+    else:
+        status = plot_spectra_from_files(sorted(spectra_folder.glob("spectra_*.json")), elements)
     if status:
         # Raise an exception if the plotting failed
         message = f"Error plotting spectra from folder {spectra_folder}. No spectra found, did you run the `hallucinator generate` command?"
         typer.secho(message, fg=typer.colors.RED, err=True)
         raise typer.Exit(status)
+
+
+@app.command("hallucinate")
+def hallucinate(
+    composition_file: Path = typer.Argument(..., help="File containing composition"),
+    mapping_file: Path = typer.Option(..., "--mapping", help="Mapping file", show_default=False),
+    config_file: Path = typer.Option(None, help="Configuration file", show_default=False),
+    output_path: Path = typer.Option(Path("output/hallucinated_spectra.json"), "--output", help="Output directory"),
+):
+    """Hallucinate spectra from a composition file"""
+    if not composition_file.exists():
+        message = f"File {composition_file} does not exist."
+        typer.secho(message, fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
+
+    # Create output directory if it doesn't exist
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(composition_file) as f:
+        composition = json.load(f)
+
+    config = Config.from_file(config_file) if config_file else Config()
+    if not mapping_file or not mapping_file.exists():
+        mapping = generate_peak_positions(config.seed, config.peak_position_spread, config.peak_position_spread)
+    else:
+        with open(mapping_file) as f:
+            mapping = json.load(f)
+
+    wavelength = np.linspace(config.wavelength_min, config.wavelength_max, config.num_points)
+    amplitude = hallucinator(
+        wavelength,
+        composition,
+        peak_positions=mapping,
+        peak_width=config.peak_width,
+        background_width=config.background_width,
+        background_level=config.background_level,
+    )
+    spectra_data = {
+        "random_seed": config.seed,
+        "composition": composition,
+        "label": stringify_composition(
+            composition,
+        ),
+        "wavelength": wavelength.tolist(),
+        "amplitude": amplitude.tolist(),
+    }
+    # Write output
+    with open(output_path, "w") as f:
+        json.dump(spectra_data, f, indent=4)
+    logger.info(f"Generated hallucinated spectra for {stringify_composition(composition)}")
+    logger.info(f"Output written to {output_path}")
+    logger.info(f"Please run `hallucinator plot --file {output_path}` to view the generated spectra")
 
 
 @app.command("compare-spectra")
@@ -209,6 +263,11 @@ def generate_hallucinated_spectra(
     )
     config_used_path = output_dir / "hallucination_parameters.json"
     config_used.to_file(config_used_path)
+
+    # Save mapping used
+    mapping_path = output_dir / "mapping.json"
+    with open(mapping_path, "w") as f:
+        json.dump(mapping, f, indent=4)
 
     logger.info(f"Generated {num_spectra} hallucinated spectra")
     logger.info(f"Saved hallucinated spectra to {output_dir}")
