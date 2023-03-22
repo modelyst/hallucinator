@@ -17,6 +17,15 @@ hallucinator generate --seed 0 -e Ba -e Mg -e Cu -e V --num 1000 --output output
 ```
 
 This command will generate 1000 hallucinated spectra and save them to the output/spectra directory. You can specify various options, such as the number of spectra to generate, the output directory, and the elements to use.
+
+### Generating Hallucinated Spectra For A Composition
+
+To generate hallucinated spectra for a given composition, you can use the generate command:
+
+```Bash
+hallucinator hallucinate output/composition/test.json --mapping output/spectra/mapping.json
+```
+
 ### Plotting Spectra
 
 To plot the spectra, you can use the plot command:
