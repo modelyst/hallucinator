@@ -1,0 +1,47 @@
+[tool.poetry]
+authors = ["Michael Statt <michael.statt@modelyst.io>"]
+description = "CLI tool for hallucinating helao sectra."
+name = "hallucinator"
+packages = [
+  {include = "hallucinator", from = "src"},
+]
+readme = "README.md"
+version = "0.1.0"
+
+[tool.poetry.dependencies]
+matplotlib = "^3.7.1"
+python = ">=3.8.1,<4.0"
+rich = "^13.3.2"
+typer = "^0.7.0"
+
+[tool.poetry.group.dev.dependencies]
+black = "^23.1.0"
+flake8 = "^6.0.0"
+isort = "^5.12.0"
+mypy = "^1.1.1"
+pre-commit = "^3.2.0"
+pytest = "^7.2.2"
+pytest-cov = "^4.0.0"
+
+[build-system]
+build-backend = "poetry.core.masonry.api"
+requires = ["poetry-core"]
+
+# add entry points for the CLI tool
+[tool.poetry.scripts]
+hallucinator = "hallucinator.cli:app"
+
+[tool.black]
+line-length = 120
+target-version = ['py39', 'py310']
+
+[tool.isort]
+line_length = 120
+profile = "black"
+
+[tool.mypy]
+files = "src/hallucinator"
+ignore_missing_imports = false
+
+[tool.flake8]
+max-line-length = 120
