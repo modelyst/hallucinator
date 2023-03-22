@@ -27,7 +27,7 @@ def plot_spectra_from_files(composition_files: List[Path], elements: Optional[Li
         return 1
     spectra_values = {composition_file: read_spectra(composition_file) for composition_file in composition_files}
     reducer = lambda compare, initial_value: lambda key: reduce(
-        lambda prev_val, composition_file: compare(compare(spectra_values[composition_file]["amplitude"]), prev_val),
+        lambda prev_val, composition_file: compare(compare(spectra_values[composition_file][key]), prev_val),
         composition_files,
         initial_value,
     )
